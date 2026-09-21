@@ -16,14 +16,13 @@ canvas{
 <body>
 <h1>공 잡기 게임</h1>
 <p>
-점수 : <span id="score">0</span> | 
-속도 : <span id="speed">1</span> 단계 | 
+점수 : <span id="score">0</span> 
+속도 : <span id="speed">1</span> 단계
 남은 시간 : <span id="time">30</span>초
 </p>
 <button onclick="startGame()">게임 시작</button>
 <br><br>
 <canvas id="gameCanvas" width="600" height="400"></canvas>
-
 <script>
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
@@ -39,32 +38,40 @@ canvas{
     let timerId;
     let animId;
 
-    const ball = {
-        x: 300, y: 200, radius: 25, dx: 3, dy: 2
-    };
+    let balls = [];
 
-    function drawBall() {
-        ctx.beginPath();
-        ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI*2);
-        ctx.fillStyle = "tomato";
-        ctx.fill();
+    function createBall(x, y, dx, dy) {
+        return {
+            x: x, 
+            y: y, 
+            radius: 50, 
+            dx: dx !== undefined ? dx : 3, 
+            dy: dy !== undefined ? dy : 2
+        };
+    }
+
+    function drawBalls() {
+        for (let i = 0; i < balls.length; i++) {
+            ctx.beginPath();
+            ctx.arc(balls[i].x, balls[i].y, balls[i].radius, 0, Math.PI*2);
+            ctx.fillStyle = "tomato";
+            ctx.fill();
+        }
     }
 
     function startGame() {
         cancelAnimationFrame(animId);
         clearInterval(timerId);
 
-        scoreText.textContent = score;
-        timeText.textContent = timeLeft;
-        speedText.textContent = speedLevel;
         score = 0;
         timeLeft = 30;
         speedLevel = 1;
 
-        ball.x = 300;
-        ball.y = 200;
-        ball.dx = 3;
-        ball.dy = 2;
+        scoreText.textContent = score;
+        timeText.textContent = timeLeft;
+        speedText.textContent = speedLevel;
+
+        balls = [createBall(300, 200, 3, 2)];
 
         gameRunning = true;
 
@@ -86,60 +93,79 @@ canvas{
         alert("최종 점수: " + score);
     }
 
-    function updateBall() {
-        ball.x += ball.dx;
-        ball.y += ball.dy;
+    function updateBalls() {
+        for (let i = 0; i < balls.length; i++) {
+            let ball = balls[i];
+            ball.x += ball.dx;
+            ball.y += ball.dy;
 
-        if (ball.x + ball.radius > canvas.width || ball.x - ball.radius < 0){
-            ball.dx = -ball.dx;
-        }
-        if (ball.y + ball.radius > canvas.height || ball.y - ball.radius < 0){
-            ball.dy = -ball.dy;
+            if (ball.x + ball.radius > canvas.width || ball.x - ball.radius < 0){
+                ball.dx = -ball.dx;
+            }
+            if (ball.y + ball.radius > canvas.height || ball.y - ball.radius < 0){
+                ball.dy = -ball.dy;
+            }
         }
     }
 
     function drawGame() {
         if (!gameRunning) return;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        drawBall();
-        updateBall();
+        drawBalls();
+        updateBalls();
         animId = requestAnimationFrame(drawGame);
     }
 
-    drawBall();
+    let initialBall = createBall(300, 200, 3, 2);
+    ctx.beginPath();
+    ctx.arc(initialBall.x, initialBall.y, initialBall.radius, 0, Math.PI*2);
+    ctx.fillStyle = "tomato";
+    ctx.fill();
 
     canvas.addEventListener("click", function (event) {
+        if (!gameRunning) return;
 
         const rect = canvas.getBoundingClientRect();
         const mouseX = event.clientX - rect.left;
         const mouseY = event.clientY - rect.top;
 
-        const dx = mouseX - ball.x;
-        const dy = mouseY - ball.y;
+        for (let i = 0; i < balls.length; i++) {
+            let ball = balls[i];
+            const dx = mouseX - ball.x;
+            const dy = mouseY - ball.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
 
-        const distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance <= ball.radius) {
+                score++;
+                scoreText.textContent = score;
+                speedLevel++;
+                speedText.textContent = speedLevel;
 
-        if (distance <= ball.radius) {
-            score++;
-            scoreText.textContent = score;
-            speedLevel++;
-            speedText.textContent = speedLevel;
-            
-            if (ball.dx > 0) {
-                ball.dx += 0.5;
-            } else {
-                ball.dx -= 0.5;
+                if (score % 3 === 0) {
+                    let newDx = ball.dx > 0 ? ball.dx + 0.5 : ball.dx - 0.5;
+                    let newDy = ball.dy > 0 ? ball.dy + 0.5 : ball.dy - 0.5;
+                    
+                    balls.push(createBall(ball.x, ball.y, -newDx, newDy));
+                }
+
+                if (ball.dx > 0) {
+                    ball.dx += 0.5;
+                } else {
+                    ball.dx -= 0.5;
+                }
+                if (ball.dy > 0) {
+                    ball.dy += 0.5;
+                } else {
+                    ball.dy -= 0.5;
+                }
+                
+                moveBallRandom(ball);
+                break;
             }
-            if (ball.dy > 0) {
-                ball.dy += 0.5;
-            } else {
-                ball.dy -= 0.5;
-            }
-            moveBallRandom();
         }
     });
 
-    function moveBallRandom() {
+    function moveBallRandom(ball) {
         ball.x = Math.random() * (canvas.width - ball.radius * 2) + ball.radius;
         ball.y = Math.random() * (canvas.height - ball.radius * 2) + ball.radius;
     }
